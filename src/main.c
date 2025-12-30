@@ -38,6 +38,22 @@ normalize(point3d p) {
     );
 }
 
+static inline float
+dot_product(point3d p1, point3d p2) {
+    return p1.x*p2.x + p1.y*p2.y + p1.z*p2.z;
+}
+static inline point3d
+vec3_sum(point3d p1, point3d p2) {
+    return new_p3(p1.x+p2.x, p1.y+p2.y, p1.z+p2.z);
+}
+
+void normalize_vec(point3d *v) {
+    float len = sqrt(v->x*v->x + v->y*v->y + v->z*v->z);
+    if (len == 0) return; // Evita divisione per zero
+    v->x /= len;
+    v->y /= len;
+    v->z /= len;
+}
 
 
 void
@@ -76,6 +92,20 @@ s_plot(screen *s, point2d p, char c) {
     s_put(s, screen.x, screen.y, c);
 }
 
+void draw_cube(
+    screen *s,
+    float   side,
+    float   time,
+    point3d offset
+);
+
+void draw_donut(   
+    screen *s,
+    float   maxrad,
+    float   minrad,
+    float   time,
+    point3d offset
+);
 
 int main(void) {
     enableRawMode();
@@ -90,69 +120,151 @@ int main(void) {
     char c;
     clear_screen();
 
-    #define CUBE_R 0.5
-    point2d p2d;
-
-    float dt = 1/FPS;
-    double delta = 0.1;
 
     while (1) {
         // listeners
-        if (read(STDIN_FILENO, &c, 1) == 1)
+        if (read(STDIN_FILENO, &c, 1) == 1){
             if (c == 17 || c == 'q')
                 break; 
+        }
 
         // --- DRAW ---
         s_clear(s);
 
-        for (float i = -CUBE_R; i <= CUBE_R; i += 0.02f) {
-          for (float j = -CUBE_R; j <= CUBE_R; j += 0.02f) {
+        // draw_cube (s, 0.2f, time, new_p3(0.5, 0, 1));
+        // draw_donut(s, 0.08f, 0.25f, time, new_p3(-0.5, 0, 1));
 
-            // Definisco i 6 punti grezzi
-            point3d punti[6] = {
-                {i, j, CUBE_R},  // Fronte
-                {i, j, -CUBE_R}, // Retro
-                {CUBE_R, j, i},  // Destra
-                {-CUBE_R, j, i}, // Sinistra
-                {i, CUBE_R, j},  // Sopra
-                {i, -CUBE_R, j}  // Sotto
-            };
-
-            // Caratteri diversi per ogni faccia (per distinguerle)
-            char chars[6] = {'@', '.', '$', '~', '#', '+'};
-
-            // Processo tutti e 6 i punti in un colpo solo
-            for (int k = 0; k < 6; k++) {
-              point3d p = punti[k];
-
-              // 1. Ruota
-              rotate_x(&p, time);
-              rotate_y(&p, time);
-              rotate_z(&p, time); // Opzionale
-              // 2. Sposta
-              p.z += 2.0f;
-
-              float ooz = 1.0f / p.z;
-              p2d = normalize(p);
-
-              point2d coords = coords_to_pix(s, p2d);
-              int idx = coords.y * cols + coords.x;
-              if (ooz > s->zbuf[idx]) {
-                s->zbuf[idx] = ooz;
-                s_put(s, coords.x, coords.y, chars[k]);
-              }
-            }
-          }
-        }
-
-        time += 0.05;
+        draw_donut(s, 0.1f, 0.5f, time, new_p3(0, 0, 1));
+        
+        // draw_cube (s, 0.3f, time, new_p3(0, 0, 1));
+        
         // end
+        time += 0.05f;
         printf("\x1b[H"); 
         fputs(s->buff, stdout); 
         fflush(stdout); 
         usleep(33000); 
     }
 
+    clear_screen();
     free_screen(s);
     return 0;
+}
+
+
+
+void draw_donut(   
+    screen *s,
+    float   r1,
+    float   r2,
+    float   time,
+    point3d offset
+) {
+    point3d p, normal, lum = new_p3(0, 1, -1);
+
+    normalize_vec(&lum);
+    
+    char chars[12] = ".,-~:;=!*#$@";
+    float ooz;
+    point2d coords;
+    int idx, charidx;
+    
+    for (double phi = 0; phi < 2*M_PI; phi+=0.02) {
+        for (double theta = 0; theta < 2*M_PI; theta+=0.02) {
+            // calcola l'inclinazione del punto
+            // poi lo sposta dal centro di r2
+            float width = r1*cos(theta) + r2;
+            
+            p = new_p3(
+                width*cos(phi),
+                   r1*sin(theta),
+                width*sin(phi)
+            );
+            normal = new_p3(
+                cos(theta)*cos(phi),
+                sin(theta),
+                cos(theta)*sin(phi)
+            );
+
+            
+
+            rotate_x(&p, time);
+            rotate_x(&normal, time);
+            // rotate_y(&p, time);            
+            // rotate_y(&normal, time);            
+            rotate_z(&p, time);
+            rotate_z(&normal, time);
+
+            p = vec3_sum(p, offset);
+
+            float prod = dot_product(normal, lum);
+
+            if (prod > 0) {
+                charidx = (int)(prod * 12);
+                
+                if (charidx > 12) charidx = 12;
+                if (charidx < 0)  charidx = 0;
+                
+                ooz = 1.0f / p.z;
+                coords = coords_to_pix(s, normalize(p));
+                idx = coords.y * s->cols + coords.x;
+
+                if (ooz > s->zbuf[idx]) {
+                    s->zbuf[idx] = ooz;
+                    s_put(s, coords.x, coords.y, chars[charidx]);
+                }
+            }
+        }
+    }
+}
+
+void draw_cube(
+    screen *s,
+    float   side,
+    float   time,
+    point3d offset
+) {
+    char chars[6] = {'@', '.', '$', '~', '#', '+'};
+    float ooz;
+    point2d p2d, coords;
+    int idx;
+
+    float sizeop = -1*side;
+
+    for (float i = sizeop; i <= side; i += 0.02f) {
+      for (float j = sizeop; j <= side; j += 0.02f) {
+
+        // Definisco i 6 punti grezzi
+        point3d punti[6] = {
+            {i, j, side},  // Fronte
+            {i, j, sizeop}, // Retro
+            {side, j, i},  // Destra
+            {sizeop, j, i}, // Sinistra
+            {i, side, j},  // Sopra
+            {i, sizeop, j}  // Sotto
+        };
+
+        // for each face draws a point.
+        for (int k = 0; k < 6; k++) {
+          point3d p = punti[k];
+
+          rotate_x(&p, time);
+          rotate_y(&p, time);
+          rotate_z(&p, time);
+
+          p = vec3_sum(p, offset);
+
+          ooz = 1.0f / p.z;
+          p2d = normalize(p);
+
+          coords = coords_to_pix(s, p2d);
+          idx = coords.y * s->cols + coords.x;
+
+          if (ooz > s->zbuf[idx]) {
+            s->zbuf[idx] = ooz;
+            s_put(s, coords.x, coords.y, chars[k]);
+          }
+        }
+      }
+    }
 }

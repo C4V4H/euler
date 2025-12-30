@@ -105,6 +105,7 @@ void get_terminal_size(int *rows, int *cols) {
         *cols = 80;
     } else {
         *rows = w.ws_row;
-        *cols = w.ws_col;
+        // *cols = w.ws_col;
+        *cols = w.ws_row*2.3;
     }
 }
