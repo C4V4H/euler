@@ -10,16 +10,17 @@
 #include <sys/ioctl.h> 
 #include <unistd.h>
 
+#include "geometry.h"
 #include "tools.h"
 
 /* ================= TUI STUFF ================= */
 
 typedef struct {
-    size_t rows;
-    size_t cols;
-    size_t size; 
-    char  *buff;
-    float *zbuf;
+    size_t  rows;
+    size_t  cols;
+    size_t  size; 
+    char   *buff;
+    double *zbuf;
 } screen;
 
 typedef enum {
@@ -36,6 +37,9 @@ void
 free_screen(screen *s);
 
 void s_clear(screen *s);
+
+void
+s_plot(screen *s, vec3 v, char c);
 
 void
 s_put(screen *s, int x, int y, char c);
