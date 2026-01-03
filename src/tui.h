@@ -1,6 +1,7 @@
 #ifndef __TUI_H 
 #define __TUI_H
 
+#include <stddef.h>
 #include <stdlib.h>
 #include <termios.h>
 #include <string.h>
@@ -30,28 +31,26 @@ typedef enum {
 
 screen*
 init_screen(
-    int rows, int cols
+    size_t rows, size_t cols
 );
 
 void
 free_screen(screen *s);
 
-void s_clear(screen *s);
+void
+s_clear(screen *s);
 
 void
 s_plot(screen *s, vec3 v, char c);
 
 void
-s_put(screen *s, int x, int y, char c);
+s_put(screen *s, size_t x, size_t y, char c);
 
 void
-s_setcursor(screen *s, int i, int j);
+s_write(screen *s, size_t x, size_t y, const char* str);
 
 void
-s_write(screen *s, int x, int y, const char* str);
-
-void
-s_draw_text(screen *s, int x, int y, const char* fmt, ...);
+s_draw_text(screen *s, size_t x, size_t y, const char* fmt, ...);
 
 
 static inline void
@@ -74,9 +73,9 @@ clear_screen(void) {
 }
 
 
-void disableRawMode();
-void enableRawMode();
-void get_terminal_size(int *rows, int *cols);
+void disableRawMode(void);
+void enableRawMode (void);
+void get_terminal_size(size_t *rows, size_t *cols);
 
 
 #endif

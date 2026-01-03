@@ -11,7 +11,7 @@
 
 void draw_cube(
     screen *s,
-    float   side,
+    double  side,
     vec3    offset,
     vec3    rotation
 );
@@ -27,7 +27,7 @@ void draw_donut(
 int main(void) {
     enableRawMode();
     
-    int rows, cols;
+    size_t rows, cols;
     get_terminal_size(&rows, &cols);
 
     screen *s = init_screen(rows, cols);
@@ -81,13 +81,12 @@ void draw_donut(
     vec3 lum = vec3_normalized((vec3){0, 1, -1});
     
     char  chars[12] = ".,-~:;=!*#$@";
-    int   charidx;
     
     for (double phi = 0; phi < 2*M_PI; phi+=0.02) {
         for (double theta = 0; theta < 2*M_PI; theta+=0.02) {
             // calcola l'inclinazione del punto
             // poi lo sposta dal centro di r2
-            float width = r1*cos(theta) + r2;
+            double width = r1*cos(theta) + r2;
             
             vec3 v = (vec3) {
                 width*cos(phi),
@@ -123,15 +122,15 @@ void draw_donut(
 
 void draw_cube(
     screen *s,
-    float   side,
+    double  side,
     vec3    offset,
     vec3    rotation
 ) {
     char chars[6] = "@.=~#+";
-    float sizeop = -1*side;
+    double sizeop = -1*side;
 
-    for (float i = sizeop; i <= side; i += 0.02f) {
-        for (float j = sizeop; j <= side; j += 0.02f) {
+    for (double i = sizeop; i <= side; i += 0.02f) {
+        for (double j = sizeop; j <= side; j += 0.02f) {
 
             vec3 punti[6] = {
                 {i, j, side},   // Fronte

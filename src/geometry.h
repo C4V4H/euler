@@ -2,6 +2,7 @@
 #define GEOMETRY_H
 
 #include <math.h>
+#include <stddef.h>
 #include <stdlib.h>
 
 /* ===================== STRUCT DEFINITION ===================== */
@@ -9,6 +10,10 @@
 typedef struct {
     double x, y;
 } vec2;
+
+typedef struct {
+    size_t x, y;
+} vec2u;
 
 typedef struct {
     double x, y, z;

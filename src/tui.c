@@ -1,5 +1,6 @@
 #include "tui.h"
 #include "geometry.h"
+#include <stddef.h>
 
 void
 s_clear(screen *s) {
@@ -9,7 +10,7 @@ s_clear(screen *s) {
     memset(s->zbuf, 0, s->rows * s->cols * sizeof(double));
     
     // sets the last col to be '\n'
-    for (int y = 0; y < s->rows; y++) {
+    for (size_t y = 0; y < s->rows; y++) {
         s->buff[y * (s->cols + 1) + s->cols] = '\n';
     }
     s->buff[s->size] = '\0'; 
@@ -17,14 +18,14 @@ s_clear(screen *s) {
 
 screen*
 init_screen(
-    int rows,
-    int cols
+    size_t rows,
+    size_t cols
 ) {
     screen *s = (screen*)xmalloc(sizeof(screen));
     s->rows   = rows;
     s->cols   = cols;
     s->size   = rows * (cols + 1); 
-    s->buff   = (char*)xmalloc(s->size + 1);
+    s->buff   =   (char*)xmalloc(s->size + 1);
     s->zbuf   = (double*)xmalloc(sizeof(double)*rows*cols);
     
     s_clear(s);
@@ -41,32 +42,32 @@ void free_screen(screen *s) {
 }
 
 
-vec2 coords_to_pix(screen *s, vec2 p) {
+vec2u coords_to_pix(screen *s, vec2 p) {
     float char_aspect = 2.3f; 
 
-    float scale_y = s->rows * 0.5f;
+    float scale_y = (float)s->rows * 0.5f;
     float scale_x = scale_y * char_aspect;
 
-    int center_x = s->cols / 2;
-    int center_y = s->rows / 2;
+    int center_x = (int)(s->cols / 2);
+    int center_y = (int)(s->rows / 2);
 
-    int screen_x = (int)( p.x * scale_x + center_x);
-    int screen_y = (int)(-p.y * scale_y + center_y);
+    size_t screen_x = (size_t)( p.x * scale_x + center_x);
+    size_t screen_y = (size_t)(-p.y * scale_y + center_y);
 
-    return (vec2){screen_x, screen_y};
+    return (vec2u){screen_x, screen_y};
 }
 
 void
 s_plot(screen *s, vec3 v, char c) {
     double ooz    = 1 / v.z;
-    vec2   coords = coords_to_pix(s, vec3_project(v));
+    vec2u  coords = coords_to_pix(s, vec3_project(v));
 
     
-    if (coords.x < 0 || coords.x >= s->cols ||
-        coords.y < 0 || coords.y >= s->rows)
+    if (coords.x >= s->cols ||
+        coords.y >= s->rows)
         return;
 
-    int    idx    = coords.y * s->cols + coords.x;
+    size_t idx = coords.y * (size_t)(s->cols + 1) + coords.x;
 
     if (ooz > s->zbuf[idx]) {
         s->zbuf[idx] = ooz;
@@ -74,23 +75,37 @@ s_plot(screen *s, vec3 v, char c) {
     }
 }
 
-
 void
-s_put(screen *s, int x, int y, char c) {
-    if (x < 0 || x >= s->cols || y < 0 || y >= s->rows) return;
+s_put(
+    screen *s,
+    size_t  x,
+    size_t  y,
+    char    c
+) {
+    if (x >= s->cols || y >= s->rows)
+        return;
     
-    s->buff[y * (s->cols + 1) + x] = c;
+    size_t idx = (size_t)y * (s->cols + 1) + (size_t)x;
+    s->buff[idx] = c;
 }
 
 void
-s_write(screen *s, int x, int y, const char* str) {
-    for (int i = 0; str[i] != '\0'; i++) {
+s_write(
+    screen *s,
+    size_t  x,
+    size_t  y,
+    const char* str) {
+    for (size_t i = 0; str[i] != '\0'; i++) {
         s_put(s, x + i, y, str[i]);
     }
 }
 
 void
-s_draw_text(screen *s, int x, int y, const char* fmt, ...) {
+s_draw_text(
+    screen *s,
+    size_t  x,
+    size_t  y,
+    const char* fmt, ...) {
     char temp_buff[256]; 
 
     va_list ap;
@@ -118,19 +133,18 @@ void enableRawMode(void) {
 
     struct termios raw = orig_termios;
     
-    raw.c_lflag &= ~(ECHO | ICANON);
-    raw.c_iflag &= ~(IXON); 
+    raw.c_lflag &= ~((tcflag_t)(ECHO | ICANON));
+    raw.c_iflag &= ~((tcflag_t)(IXON)); 
     
-    // === AGGIUNGI QUESTE DUE RIGHE ===
-    raw.c_cc[VMIN] = 0;  // Numero minimo di byte da leggere: 0
-    raw.c_cc[VTIME] = 0; // Timeout: 0 decimi di secondo (ritorna subito)
-    // =================================
+    raw.c_cc[VMIN] = 0;
+    raw.c_cc[VTIME] = 0;
 
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
     
-    printf("\x1b[?25l"); // Nascondi cursore
+    printf("\x1b[?25l");
 }
-void get_terminal_size(int *rows, int *cols) {
+
+void get_terminal_size(size_t *rows, size_t *cols) {
     struct winsize w;
     
     if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) == -1) {
