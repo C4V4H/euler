@@ -277,7 +277,7 @@ vec3_rotate_by_quat(vec3 v, quat q) {
 
 /* Rotates the vector `v` by the given `angles` vector
  * for single vectors (such as {1,0,0}) it will use the rotation matrix
- * otherwise it will use the quaterion method using the Z-Y-X rotation oder
+ * otherwise it will use the quaterion method using the Z-Y-X rotation order
  */
 static inline vec3
 vec3_rotated(vec3 v, vec3 angles) {
